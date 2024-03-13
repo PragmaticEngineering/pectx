@@ -18,40 +18,30 @@ func NewManager(uniqueKey string) *Manager {
 }
 
 // Get retrieves the values from the context.
-func (m *Manager) Get(ctx context.Context) ([]KVStore, bool) {
+func (m *Manager) Get(ctx context.Context) (KVStore, bool) {
 	v := ctx.Value(m.ctxKey)
 
 	if v == nil {
 		return nil, false
 	}
 
-	return v.([]KVStore), true
+	return v.(KVStore), true
 }
 
 // Set stores the values in the context.
 // If the key already exists, the value is overwritten.
-func (m *Manager) Set(ctx context.Context, fields ...KVStore) context.Context {
-	fieldMap := make(map[string]string)
-
+func (m *Manager) Set(ctx context.Context, fields KVStore) context.Context {
 	kvStores, exist := m.Get(ctx) // ensure the context is initialized
 	if !exist {
-		kvStores = []KVStore{}
+		kvStores = &Store{}
+	}
+	//
+	for _, key := range fields.ListKeys() {
+		value := fields.Get(key)
+		kvStores.Set(key, value)
 	}
 
-	// store the fields in a map to avoid duplicates
-	kvStores = append(kvStores, fields...)
-	for _, kv := range kvStores {
-		key, value := kv.Get()
-		fieldMap[key] = value
-	}
-
-	// convert the map back to a slice of KVStore to store in the context
-	uniqueFields := make([]KVStore, 0, len(fieldMap))
-	for key, value := range fieldMap {
-		uniqueFields = append(uniqueFields, &Field{key: key, value: value})
-	}
-
-	return context.WithValue(ctx, m.ctxKey, uniqueFields)
+	return context.WithValue(ctx, m.ctxKey, kvStores)
 }
 
 // GetKeysAndValues retrieves the keys and values from the context.
@@ -62,8 +52,9 @@ func (m *Manager) GetKeysAndValues(ctx context.Context) []string {
 	if !ok {
 		return keysAndValues
 	}
-	for _, field := range fields {
-		key, value := field.Get()
+
+	for _, key := range fields.ListKeys() {
+		value := fields.Get(key)
 		keysAndValues = append(keysAndValues, key, value)
 	}
 

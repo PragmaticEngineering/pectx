@@ -12,33 +12,43 @@ import (
 
 const contextKey = "test123123123"
 
+func TestManager_SetDuplicateKeys(t *testing.T) {
+	t.Parallel()
+	m := pectx.NewManager(contextKey)
+	ctx := context.Background()
+	f := pectx.NewStore(map[string]string{"k": "v"})
+	ctx = m.Set(ctx, f)
+	f2 := pectx.NewStore(map[string]string{"k": "v2"})
+	ctx = m.Set(ctx, f2)
+	store, _ := m.Get(ctx)
+
+	if store.Get("k") != "v2" {
+		t.Errorf("expected v2, got %s", store.Get("k"))
+	}
+}
+
 func TestManager_Set(t *testing.T) {
 	t.Parallel()
 
 	testCases := []struct {
 		desc     string
 		expected []string
-		input    []pectx.KVStore
+		input    pectx.KVStore
 	}{
 		{
 			desc:     "Test that the context is set correctly",
 			expected: []string{"k", "v"},
-			input:    []pectx.KVStore{pectx.NewField("k", "v")},
+			input:    &pectx.Store{"k": "v"},
 		},
 		{
 			desc:     "Test if multiple fields are set correctly",
 			expected: []string{"k", "v", "k2", "v2"},
-			input:    []pectx.KVStore{pectx.NewField("k", "v"), pectx.NewField("k2", "v2")},
+			input:    &pectx.Store{"k": "v", "k2": "v2"},
 		},
 		{
 			desc:     "Test if the context is set correctly with no fields",
 			expected: []string{},
-			input:    []pectx.KVStore{},
-		},
-		{
-			desc:     "Test if the values are overwritten if the key already exists",
-			expected: []string{"k", "v2"},
-			input:    []pectx.KVStore{pectx.NewField("k", "v"), pectx.NewField("k", "v2")},
+			input:    &pectx.Store{},
 		},
 	}
 	for _, tC := range testCases {
@@ -47,7 +57,7 @@ func TestManager_Set(t *testing.T) {
 			t.Parallel()
 			m := pectx.NewManager(contextKey)
 			ctx := context.Background()
-			ctx = m.Set(ctx, testCase.input...)
+			ctx = m.Set(ctx, testCase.input)
 			keysAndValues := m.GetKeysAndValues(ctx)
 			// sort the slices to compare them, as the order of the keys and values is not guaranteed.
 			sort.Strings(keysAndValues)     // Sort the keysAndValues slice
@@ -77,20 +87,14 @@ func TestGetKeysAndValues(t *testing.T) {
 
 }
 
-func helperFields(amount int) []pectx.KVStore {
-	var fields []pectx.KVStore
-	for i := 0; i < amount; i++ {
-		fields = append(fields, pectx.NewField(fmt.Sprintf("k%d", i), fmt.Sprintf("v%d", i)))
-	}
-	return fields
-}
+func helperFields(amount int) pectx.KVStore {
 
-func helperFieldsDuplicates(amount int) []pectx.KVStore {
-	var fields []pectx.KVStore
+	store := pectx.Store{}
 	for i := 0; i < amount; i++ {
-		fields = append(fields, pectx.NewField(fmt.Sprintf("k%d", i), fmt.Sprintf("v%d", i)))
+		store.Set(fmt.Sprintf("k%d", i), fmt.Sprintf("v%d", i))
+
 	}
-	return fields
+	return &store
 }
 
 func BenchmarkManager_Set(b *testing.B) {
@@ -98,7 +102,7 @@ func BenchmarkManager_Set(b *testing.B) {
 
 	testCases := []struct {
 		name   string
-		fields []pectx.KVStore
+		fields pectx.KVStore
 		mgr    *pectx.Manager
 		ctx    context.Context
 	}{
@@ -120,24 +124,12 @@ func BenchmarkManager_Set(b *testing.B) {
 			mgr:    pectx.NewManager(contextKey),
 			ctx:    context.Background(),
 		},
-		{
-			name:   "manager with 10 fields - All Duplicate",
-			fields: helperFieldsDuplicates(10),
-			mgr:    pectx.NewManager(contextKey),
-			ctx:    context.Background(),
-		},
-		{
-			name:   "manager with 100 fields - All Duplicate",
-			fields: helperFieldsDuplicates(100),
-			mgr:    pectx.NewManager(contextKey),
-			ctx:    context.Background(),
-		},
 	}
 
 	for _, tc := range testCases {
 		b.Run(tc.name, func(b *testing.B) {
 			for i := 0; i < b.N; i++ {
-				tc.mgr.Set(tc.ctx, tc.fields...)
+				tc.mgr.Set(tc.ctx, tc.fields)
 			}
 		})
 	}
@@ -147,7 +139,7 @@ func helperFieldsGet(amount int) (context.Context, *pectx.Manager) {
 	ctx := context.Background()
 	m := pectx.NewManager(contextKey)
 
-	m.Set(ctx, helperFields(amount)...)
+	m.Set(ctx, helperFields(amount))
 
 	return ctx, m
 }

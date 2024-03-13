@@ -6,10 +6,10 @@ import (
 	"github.com/pragmaticengineering/pectx"
 )
 
-// helper function to create a new Field
-func newField(key, value string, t *testing.T) *pectx.Field {
+// helper function to create a new Store
+func newStore(key, value string, t *testing.T) *pectx.Store {
 	t.Helper()
-	f := &pectx.Field{}
+	f := &pectx.Store{}
 	f.Set(key, value)
 	return f
 }
@@ -19,28 +19,28 @@ func TestGet(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		expected *pectx.Field
+		expected *pectx.Store
 		key      string
 		exists   bool
 		val      string
 	}{
 		{
-			desc:     "validate Field values",
-			expected: newField("key", "val", t),
+			desc:     "validate Store values",
+			expected: newStore("key", "val", t),
 			key:      "key",
 			exists:   true,
 			val:      "val",
 		},
 		{
 			desc:     "validate that the value doesn't exist",
-			expected: newField("key", "", t),
+			expected: newStore("key", "", t),
 			key:      "key",
 			exists:   false,
 			val:      "",
 		},
 		//{
 		//	desc: "validate that the value is overwritten",
-		//	expected: newField("key", "val"),
+		//	expected: newStore("key", "val"),
 		//	key: 	"key",
 		//	exists: true,
 		//	val: "val2",
@@ -50,10 +50,7 @@ func TestGet(t *testing.T) {
 		testCase := tC
 		t.Run(testCase.desc, func(t *testing.T) {
 			t.Parallel()
-			key, value := testCase.expected.Get()
-			if key != testCase.key {
-				t.Errorf("%s: expected %s, got %s", testCase.desc, testCase.key, key)
-			}
+			value := testCase.expected.Get(testCase.key)
 			if value != testCase.val {
 				t.Errorf("%s: expected %s, got %s", testCase.desc, testCase.val, value)
 			}
@@ -67,13 +64,13 @@ func TestSet(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		expected *pectx.Field
+		expected *pectx.Store
 		key      string
 		value    string
 	}{
 		{
 			desc:     "validate that the value is set",
-			expected: newField("key", "val", t),
+			expected: newStore("key", "val", t),
 			key:      "key",
 			value:    "val",
 		},
@@ -82,14 +79,12 @@ func TestSet(t *testing.T) {
 		testCase := tC
 		t.Run(testCase.desc, func(t *testing.T) {
 			t.Parallel()
-			f := pectx.Field{}
+			f := pectx.Store{}
 			f.Set(testCase.key, testCase.value)
 
 			// Check if the value is set
-			key, value := testCase.expected.Get()
-			if key != testCase.key {
-				t.Errorf("%s: expected %s, got %s", testCase.desc, testCase.key, key)
-			}
+			value := testCase.expected.Get(testCase.key)
+
 			if value != testCase.value {
 				t.Errorf("%s: expected %s, got %s", testCase.desc, testCase.value, value)
 			}
@@ -103,13 +98,13 @@ func TestOverrideValue(t *testing.T) {
 
 	testCases := []struct {
 		desc     string
-		expected *pectx.Field
+		expected *pectx.Store
 		key      string
 		value    string
 	}{
 		{
 			desc:     "validate that the value is overwritten",
-			expected: newField("key", "val2", t),
+			expected: newStore("key", "val2", t),
 			key:      "key",
 			value:    "val2",
 		},
@@ -118,15 +113,12 @@ func TestOverrideValue(t *testing.T) {
 		testCase := tC
 		t.Run(testCase.desc, func(t *testing.T) {
 			t.Parallel()
-			f := pectx.Field{}
+			f := pectx.Store{}
 			f.Set(testCase.key, "val")
 			f.Set(testCase.key, testCase.value)
 
 			// Check if the value is set
-			key, value := testCase.expected.Get()
-			if key != testCase.key {
-				t.Errorf("%s: expected %s, got %s", testCase.desc, testCase.key, key)
-			}
+			value := testCase.expected.Get(testCase.key)
 			if value != testCase.value {
 				t.Errorf("%s: expected %s, got %s", testCase.desc, testCase.value, value)
 			}
