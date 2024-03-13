@@ -31,23 +31,24 @@ func (m *Manager) Get(ctx context.Context) ([]KVStore, bool) {
 // Set stores the values in the context.
 // If the key already exists, the value is overwritten.
 func (m *Manager) Set(ctx context.Context, fields ...KVStore) context.Context {
-	fieldMap := map[string]string{}
+	fieldMap := make(map[string]string)
+
 	kvStores, exist := m.Get(ctx) // ensure the context is initialized
 	if !exist {
 		kvStores = []KVStore{}
 	}
 
 	// store the fields in a map to avoid duplicates
-	allFields := append(kvStores, fields...)
-	for _, kv := range allFields {
+	kvStores = append(kvStores, fields...)
+	for _, kv := range kvStores {
 		key, value := kv.Get()
 		fieldMap[key] = value
 	}
 
 	// convert the map back to a slice of KVStore to store in the context
-	uniqueFields := []KVStore{}
+	uniqueFields := make([]KVStore, 0, len(fieldMap))
 	for key, value := range fieldMap {
-		uniqueFields = append(uniqueFields, NewField(key, value))
+		uniqueFields = append(uniqueFields, &Field{key: key, value: value})
 	}
 
 	return context.WithValue(ctx, m.ctxKey, uniqueFields)
