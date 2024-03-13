@@ -246,30 +246,31 @@ func BenchmarkKeysAndValues_forloop(b *testing.B) {
 	// Define test cases
 	testCases := []struct {
 		name string
-		data context.Context
+		data map[string]string
 	}{
 		{
-			name: "TestCase1",
-			data: manager.Set(context.Background(), map[string]string{
+			name: "Set 1 key-value pair",
+			data: map[string]string{
 				"key1": "value1",
-				"key2": "value2",
-				"key3": "value3",
-			}),
+			},
 		},
 		{
-			name: "TestCase2",
-			data: manager.Set(context.Background(), map[string]string{
-				"key4": "value4",
-				"key5": "value5",
-			}),
+			name: "Set 10 key-value pairs",
+			data: helperFields(10),
 		},
-		// Add more test cases as needed
+		{
+			name: "Set 100 key-value pairs",
+			data: helperFields(100),
+		},
 	}
 
 	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
+		testcase := tc
+		b.Run(testcase.name, func(b *testing.B) {
+			ctx := manager.Set(context.Background(), testcase.data)
+			b.ResetTimer()
 			for i := 0; i < b.N; i++ {
-				manager.GetKeysAndValues(tc.data)
+				manager.GetKeysAndValues(ctx)
 			}
 		})
 	}
