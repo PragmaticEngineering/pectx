@@ -18,8 +18,8 @@ m := pectx.NewManager(contextKey)
 ctx := context.Background()
 
 // setting data utilizes the KVStore interface
-// This package provides a default implementation of KVStore called Field
-f := pectx.NewField("my-key", "my-value")
+// This package provides a default implementation of KVStore called Store
+f := pectx.NewStore(map[string]string{"my-key":"my-value"})
 
 // set the value in context
 // The set method returns a new context with the value set
@@ -41,8 +41,7 @@ ctx := context.Background()
 
 // setting data utilizes the KVStore interface
 // This package provides a default implementation of KVStore called Field
-f := pectx.NewField("my-key", "my-value")
-f2 := pectx.NewField("my-key", "my-value2")
+f := pectx.NewStore(map[string]string{"my-key":"my-value","my-key": "my-value2"})
 // set the value in context
 // The set method returns a new context with the value set
 // The Set function can accept multiple values to set in context.
@@ -54,6 +53,19 @@ ctx := m.Set(ctx, f, f2)
 keysAndValues := m.GetKeysAndValues(ctx)
 
 ```
+
+# Logging 
+The package also provides a simple way to add context to your logging from the context.
+
+- If your logger implements logr.Logger, you can use the WithValues method to add context to your log messages.
+```go
+    keysAndValues := m.GetKeysAndValues(ctx)
+    log.WithValues(keysAndValues).Info("my log message")
+```
+- Zerolog is a popular logging library that is used in this package. You can use the With method to add context to your log messages. However, since Zerolog doesn't implement logr.Logger, you will have to create a helper function to use With.
+
+some notes around logging:
+- Since 
 
 
 # FAQ
