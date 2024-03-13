@@ -10,11 +10,16 @@ type Manager struct {
 	// The context key used to store the data in the context.
 	// This is to avoid collisions with other packages.
 	ctxKey ctxKey
+	// The store used to store the data.
+	store KVStore
 }
 
 // NewManager creates a new manager with the given context key.
-func NewManager(uniqueKey string) *Manager {
-	return &Manager{ctxKey: ctxKey(uniqueKey)}
+func NewManager(uniqueKey string, store KVStore) *Manager {
+	return &Manager{
+		ctxKey: ctxKey(uniqueKey),
+		store:  store,
+	}
 }
 
 // Get retrieves the values from the context.
@@ -30,14 +35,13 @@ func (m *Manager) Get(ctx context.Context) (KVStore, bool) {
 
 // Set stores the values in the context.
 // If the key already exists, the value is overwritten.
-func (m *Manager) Set(ctx context.Context, fields KVStore) context.Context {
+func (m *Manager) Set(ctx context.Context, keyValues map[string]string) context.Context {
 	kvStores, exist := m.Get(ctx) // ensure the context is initialized
 	if !exist {
-		kvStores = &Store{}
+		kvStores = m.store
 	}
-	//
-	for _, key := range fields.ListKeys() {
-		value := fields.Get(key)
+
+	for key, value := range keyValues {
 		kvStores.Set(key, value)
 	}
 
@@ -47,13 +51,16 @@ func (m *Manager) Set(ctx context.Context, fields KVStore) context.Context {
 // GetKeysAndValues retrieves the keys and values from the context.
 // if the context is empty, it returns an empty slice.
 func (m *Manager) GetKeysAndValues(ctx context.Context) []string {
-	keysAndValues := []string{}
+
 	fields, ok := m.Get(ctx)
 	if !ok {
-		return keysAndValues
+		return []string{}
 	}
 
-	for _, key := range fields.ListKeys() {
+	keys := fields.ListKeys()
+	keysAndValues := make([]string, 0, len(keys)*2)
+
+	for _, key := range keys {
 		value := fields.Get(key)
 		keysAndValues = append(keysAndValues, key, value)
 	}
