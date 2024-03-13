@@ -1,5 +1,10 @@
 package pectx
 
+// This line of code doesn't do anything at runtime, but if Store does not implement KVStore,
+// the code will not compile.
+// This is a common idiom in Go for checking interface implementation at compile time.
+var _ KVStore = (*Store)(nil)
+
 // Store is an interface that defines the methods to store and retrieve data from a Store.
 type KVStore interface {
 	KVGetter

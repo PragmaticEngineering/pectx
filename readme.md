@@ -13,18 +13,20 @@ pectx is a context helper for golang. It is a simple and easy to use package tha
 // The contextkey is a string that is used to store and retrieve values from context
 // it should be unique to your application
 contextKey := "my-unique-context-key"
-m := pectx.NewManager(contextKey)
+m := pectx.NewManager(contextKey, &pectx.Store{})
 
 ctx := context.Background()
 
 // setting data utilizes the KVStore interface
 // This package provides a default implementation of KVStore called Store
-f := pectx.NewStore(map[string]string{"my-key":"my-value"})
+f := map[string]string{"my-key": "my-value"}
 
 // set the value in context
 // The set method returns a new context with the value set
 // The Set function can accept multiple values to set in context.
 ctx := m.Set(ctx, f)
+kvs := m.GetKeysAndValues(ctx)
+fmt.Println(kvs) // [my-key my-value]
 ```
 
 ## Duplicate keys
@@ -35,22 +37,24 @@ Duplicate keys will be overwritten by the last value set in context.
 // The contextkey is a string that is used to store and retrieve values from context
 // it should be unique to your application
 contextKey := "my-unique-context-key"
-m := pectx.NewManager(contextKey)
+m := pectx.NewManager(contextKey, &pectx.Store{})
 
 ctx := context.Background()
 
-// setting data utilizes the KVStore interface
-// This package provides a default implementation of KVStore called Field
-f := pectx.NewStore(map[string]string{"my-key":"my-value","my-key": "my-value2"})
+// new key-value pairs you want to add to the context
+f := map[string]string{"my-key": "my-value", "my-key2": "my-value"}
 // set the value in context
 // The set method returns a new context with the value set
 // The Set function can accept multiple values to set in context.
-ctx := m.Set(ctx, f, f2)
+ctx = m.Set(ctx, f)
+f2 := map[string]string{"my-key": "my-value2", "my-key2": "my-value2"}
+ctx = m.Set(ctx, f2)
 
 // The value of my-key will be "my-value2"
 // The last value set will be the value of the key
 // The order returned by GetKeysAndValues is not guaranteed as it uses a map to ensure unique keys
 keysAndValues := m.GetKeysAndValues(ctx)
+fmt.Println(keysAndValues) // [my-key my-value2 my-key2 my-value2]
 
 ```
 
