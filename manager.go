@@ -2,9 +2,31 @@ package pectx
 
 import (
 	"context"
+
+	mapStore "github.com/pragmaticengineering/pectx/stores/map"
 )
 
+// Store is an interface that defines the methods to store and retrieve data from a Store.
+type KVStore interface {
+	KVGetter
+	KVSetter
+}
+
+// KVGetter is an interface that defines the method to retrieve data from a Store.
+type KVGetter interface {
+	Get(key string) (value string)
+	ListKeys() []string
+}
+
+// KVSetter is an interface that defines the method to store data in a Store.
+type KVSetter interface {
+	Set(key string, value string)
+}
+
 type ctxKey string
+
+// ManagerOption is a function that sets some option on the manager.
+type ManagerOption func(*Manager)
 
 type Manager struct {
 	// The context key used to store the data in the context.
@@ -14,12 +36,24 @@ type Manager struct {
 	store KVStore
 }
 
-// NewManager creates a new manager with the given context key.
-func NewManager(uniqueKey string, store KVStore) *Manager {
-	return &Manager{
-		ctxKey: ctxKey(uniqueKey),
-		store:  store,
+// WithStore changes the store used by the manager.
+func WithStore(store KVStore) ManagerOption {
+	return func(m *Manager) {
+		m.store = store
 	}
+}
+
+// NewManager creates a new manager with the given context key.
+func NewManager(uniqueKey string, opts ...ManagerOption) *Manager {
+	m := &Manager{
+		ctxKey: ctxKey(uniqueKey),
+		store:  &mapStore.Map{},
+	}
+	for _, opt := range opts {
+		opt(m)
+	}
+
+	return m
 }
 
 // Get retrieves the values from the context.
@@ -51,7 +85,6 @@ func (m *Manager) Set(ctx context.Context, keyValues map[string]string) context.
 // GetKeysAndValues retrieves the keys and values from the context.
 // if the context is empty, it returns an empty slice.
 func (m *Manager) GetKeysAndValues(ctx context.Context) []string {
-
 	fields, ok := m.Get(ctx)
 	if !ok {
 		return []string{}
