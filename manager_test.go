@@ -2,7 +2,6 @@ package pectx_test
 
 import (
 	"context"
-	"fmt"
 	"reflect"
 	"sort"
 	"testing"
@@ -14,7 +13,7 @@ const contextKey = "test123123123"
 
 func TestManager_SetDuplicateKeys(t *testing.T) {
 	t.Parallel()
-	m := pectx.NewManager(contextKey, &pectx.Store{})
+	m := pectx.NewManager(contextKey)
 	ctx := context.Background()
 	f := map[string]string{"k": "v"}
 	ctx = m.Set(ctx, f)
@@ -55,7 +54,7 @@ func TestManager_Set(t *testing.T) {
 		testCase := tC
 		t.Run(testCase.desc, func(t *testing.T) {
 			t.Parallel()
-			m := pectx.NewManager(contextKey, &pectx.Store{})
+			m := pectx.NewManager(contextKey)
 			ctx := context.Background()
 			ctx = m.Set(ctx, testCase.input)
 			keysAndValues := m.GetKeysAndValues(ctx)
@@ -71,7 +70,7 @@ func TestManager_Set(t *testing.T) {
 
 func TestGetKeysAndValuesEmpty(t *testing.T) {
 	t.Parallel()
-	m := pectx.NewManager(contextKey, &pectx.Store{})
+	m := pectx.NewManager(contextKey)
 	ctx := context.Background()
 	keysAndValues := m.GetKeysAndValues(ctx)
 	if len(keysAndValues) != 0 {
@@ -107,7 +106,7 @@ func TestGetKeysAndValues(t *testing.T) {
 		testCase := tC
 		t.Run(testCase.desc, func(t *testing.T) {
 			t.Parallel()
-			m := pectx.NewManager(contextKey, &pectx.Store{})
+			m := pectx.NewManager(contextKey)
 			ctx := context.Background()
 			ctx = m.Set(ctx, testCase.input)
 			keysAndValues := m.GetKeysAndValues(ctx)
@@ -122,155 +121,57 @@ func TestGetKeysAndValues(t *testing.T) {
 
 }
 
-func helperFields(amount int) map[string]string {
-
-	store := map[string]string{}
-	for i := 0; i < amount; i++ {
-		key := fmt.Sprintf("k%d", i)
-		store[key] = fmt.Sprintf("v%d", i)
-
-	}
-	return store
+type mockStore struct {
+	k string
+	v string
 }
 
-func BenchmarkManager_Set(b *testing.B) {
-	var contextKey = "test123123123"
+func (m *mockStore) Get(k string) string {
+	return m.v
+}
+
+func (m *mockStore) Set(k, v string) {
+	m.k = k
+	m.v = v
+}
+
+func (m *mockStore) ListKeys() []string {
+	return []string{"mockKey", "mockValue"}
+}
+
+var _ pectx.KVStore = &mockStore{}
+
+func TestWithStore(t *testing.T) {
+	t.Parallel()
 
 	testCases := []struct {
-		name   string
-		fields map[string]string
-		mgr    *pectx.Manager
-		ctx    context.Context
+		desc    string
+		options []pectx.ManagerOption
+		expectedKV []string
 	}{
 		{
-			name:   "manager with 1 field",
-			fields: helperFields(1),
-			mgr:    pectx.NewManager(contextKey, &pectx.Store{}),
-			ctx:    context.Background(),
-		},
-		{
-			name:   "manager with 10 fields",
-			fields: helperFields(10),
-			mgr:    pectx.NewManager(contextKey, &pectx.Store{}),
-			ctx:    context.Background(),
-		},
-		{
-			name:   "manager with 100 fields",
-			fields: helperFields(100),
-			mgr:    pectx.NewManager(contextKey, &pectx.Store{}),
-			ctx:    context.Background(),
+			desc:    "Test that the store is set correctly",
+			options: []pectx.ManagerOption{pectx.WithStore(&mockStore{})},
+			expectedKV: []string{"mockKey", "mockValue"},
 		},
 	}
 
-	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			for i := 0; i < b.N; i++ {
-				tc.mgr.Set(tc.ctx, tc.fields)
+	for _, tC := range testCases {
+		testCase := tC
+		t.Run(testCase.desc, func(t *testing.T) {
+			t.Parallel()
+			m := pectx.NewManager(contextKey, testCase.options...)
+			if m == nil {
+				t.Errorf("expected a manager, got nil")
 			}
-		})
-	}
-}
 
-func helperFieldsGet(amount int) (context.Context, *pectx.Manager) {
-	ctx := context.Background()
-	m := pectx.NewManager(contextKey, &pectx.Store{})
-
-	m.Set(ctx, helperFields(amount))
-
-	return ctx, m
-}
-
-func BenchmarkManager_Get(b *testing.B) {
-	testCases := []struct {
-		name   string
-		amount int
-	}{
-		{
-			name:   "context with 1 field",
-			amount: 1,
-		},
-		{
-			name:   "context with 10 fields",
-			amount: 10,
-		},
-		{
-			name:   "context with 100 fields",
-			amount: 100,
-		},
-	}
-
-	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			ctx, m := helperFieldsGet(tc.amount)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				m.Get(ctx)
-			}
-		})
-	}
-}
-
-func BenchmarkManager_GetKeysAndValues(b *testing.B) {
-	testCases := []struct {
-		name   string
-		amount int
-	}{
-		{
-			name:   "context with 1 field",
-			amount: 1,
-		},
-		{
-			name:   "context with 10 fields",
-			amount: 10,
-		},
-		{
-			name:   "context with 100 fields",
-			amount: 100,
-		},
-	}
-
-	for _, tc := range testCases {
-		b.Run(tc.name, func(b *testing.B) {
-			ctx, m := helperFieldsGet(tc.amount)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				m.GetKeysAndValues(ctx)
-			}
-		})
-	}
-}
-
-func BenchmarkKeysAndValues_forloop(b *testing.B) {
-	manager := pectx.NewManager("uniqueKey", &pectx.Store{})
-
-	// Define test cases
-	testCases := []struct {
-		name string
-		data map[string]string
-	}{
-		{
-			name: "Set 1 key-value pair",
-			data: map[string]string{
-				"key1": "value1",
-			},
-		},
-		{
-			name: "Set 10 key-value pairs",
-			data: helperFields(10),
-		},
-		{
-			name: "Set 100 key-value pairs",
-			data: helperFields(100),
-		},
-	}
-
-	for _, tc := range testCases {
-		testcase := tc
-		b.Run(testcase.name, func(b *testing.B) {
-			ctx := manager.Set(context.Background(), testcase.data)
-			b.ResetTimer()
-			for i := 0; i < b.N; i++ {
-				manager.GetKeysAndValues(ctx)
+			ctx := m.Set(context.Background(), map[string]string{"k": "v"})
+			ctx = m.Set(ctx, map[string]string{"k": "v2"})
+			kv := m.GetKeysAndValues(ctx)
+			sort.Strings(kv)
+			sort.Strings(testCase.expectedKV)
+			if !reflect.DeepEqual(testCase.expectedKV, kv){
+				t.Errorf("expected %v, got %v", []string{"mockKey", "mockValue"}, kv)
 			}
 		})
 	}
