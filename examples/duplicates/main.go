@@ -3,6 +3,7 @@ package main
 import (
 	"context"
 	"fmt"
+
 	pectx "github.com/pragmaticengineering/pectx"
 )
 
@@ -11,7 +12,7 @@ func main() {
 	// The contextkey is a string that is used to store and retrieve values from context
 	// it should be unique to your application
 	contextKey := "my-unique-context-key"
-	m := pectx.NewManager(contextKey, &pectx.Store{})
+	m := pectx.NewManager(contextKey)
 
 	ctx := context.Background()
 
