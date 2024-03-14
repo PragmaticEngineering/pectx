@@ -86,3 +86,23 @@ Keys are fairly flexible, and can hold more or less any string value. For best c
 
 ## Why should keys be constant values?
 The point of structured logging is to make later log processing easier. Your keys are, effectively, the schema of each log message. If you use different keys across instances of the same log line, you will make your structured logs much harder to use. Sprintf() is for values, not for keys!
+
+## Benchmark results
+```shell
+goos: windows
+goarch: amd64
+pkg: github.com/pragmaticengineering/pectx
+cpu: AMD Ryzen 7 5800X 8-Core Processor             
+BenchmarkManager_Set/manager_with_1_field-16         	      11193685	      107.3 ns/op	    80 B/op	   3 allocs/op
+BenchmarkManager_Set/manager_with_10_fields-16       	       4508931	      268.3 ns/op	    80 B/op	   3 allocs/op
+BenchmarkManager_Set/manager_with_100_fields-16      	        514476	       2341 ns/op	    80 B/op	   3 allocs/op
+BenchmarkManager_Get/context_with_1_field-16         	      52671543	      21.71 ns/op	    16 B/op	   1 allocs/op
+BenchmarkManager_Get/context_with_10_fields-16       	      53259243	      21.66 ns/op	    16 B/op	   1 allocs/op
+BenchmarkManager_Get/context_with_100_fields-16      	      54336505	      21.80 ns/op	    16 B/op	   1 allocs/op
+BenchmarkManager_GetKeysAndValues/context_with_1_field-16     50881305	      24.10 ns/op	    16 B/op	   1 allocs/op
+BenchmarkManager_GetKeysAndValues/context_with_10_fields-16   49886922	      23.85 ns/op	    16 B/op	   1 allocs/op
+BenchmarkManager_GetKeysAndValues/context_with_100_fields-16  50965585	      23.56 ns/op	    16 B/op	   1 allocs/op
+BenchmarkKeysAndValues_forloop/Set_1_key-value_pair-16        11087672	      110.0 ns/op	    64 B/op	   3 allocs/op
+BenchmarkKeysAndValues_forloop/Set_10_key-value_pairs-16       3255266	      373.7 ns/op	   544 B/op	   3 allocs/op
+BenchmarkKeysAndValues_forloop/Set_100_key-value_pairs-16       469452	       2538 ns/op	  5264 B/op	   3 allocs/op
+```
